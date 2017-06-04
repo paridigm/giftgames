@@ -16,21 +16,29 @@ var storage = multer.diskStorage({
 var upload = multer({ storage: storage });
 
 router.post('/upload', upload.any(), (req, res) => {
-
   console.log(req.files);
+  var obj = {
+    key:  Math.random().toString(36).substring(2, 6) + Math.random().toString(36).substring(2, 6),
+    images: []
+  };
+  obj.images = req.files.map(file => {
+    return {
+        key: file.key,
+        filepath: file.path,
+        filename: file.originalname
+    }
+  });
 
-  // MongoClient.connect('mongodb://test:test@ds161551.mlab.com:61551/gamesforgifts', function (err, db) {
-  //   if (err) {
-  //     return console.error('Connection Error. @mongodb');
-  //   }
-  //   try {
-  //     db.collection('games').insert(req.body);
-  //   } catch (err) {
-  //     console.error('Error Inserting. @mongodb');
-  //     return res.send('lol u wat m8');
-  //   }
-  //   db.close();
-  // });
+  MongoClient.connect('mongodb://test:test@ds161551.mlab.com:61551/gamesforgifts', function (err, db) {
+    if (err) return console.error('Connection Error. @mongodb');
+    try {
+      db.collection('games').insert(obj);
+    } catch (err) {
+      console.error('Error Inserting. @mongodb');
+      return res.send('lol u wat m8');
+    }
+    db.close();
+  });
 
   res.json(req.files.map(file => {
     let ext = path.extname(file.originalname);
@@ -39,22 +47,21 @@ router.post('/upload', upload.any(), (req, res) => {
       filename: file.filename
     }
   }));
-
 });
 
 
 
-router.get('/game/:id', (req, res) => {
+router.get('/game/:key', (req, res) => {
   MongoClient.connect('mongodb://test:test@ds161551.mlab.com:61551/gamesforgifts', function (err, db) {
 			if (err) {
 				return console.error('Connection Error. @mongodb');
 			}
-			db.collection('games').findOne({id: req.params.id}, function (err, obj) {
+			db.collection('games').findOne({key: req.params.key}, function (err, obj) {
         if (err) return console.error('We fucked up big time');
         if (obj) {
-          console.log(obj.id);
+          console.log(obj);
           db.close();
-          return res.send(obj.id); // Send back the fucking entire object ya clown
+          return res.json(obj); // Send back the fucking entire object ya clown
         }
         db.close();
         return res.send("Wat"); // No game found
